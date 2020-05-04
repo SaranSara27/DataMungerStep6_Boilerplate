@@ -1,5 +1,14 @@
 package com.stackroute.datamunger.query;
 
+import java.util.Collections;
+import java.util.List;
+
+import javax.script.ScriptEngine;
+import javax.script.ScriptEngineManager;
+import javax.script.ScriptException;
+
+import com.stackroute.datamunger.query.parser.Restriction;
+
 //This class contains methods to evaluate expressions
 public class Filter {
 
@@ -12,16 +21,72 @@ public class Filter {
 	 * expressions, please handle uppercase and lowercase
 	 * 
 	 */
+	public static Boolean filter(List<Restriction> restriction, List<String> logicalOperators, String[] row,
+			Header header, RowDataTypeDefinitions rowDataType) {
+		String[] javaLogics = null;
 
-	// method to evaluate expression for eg: salary>20000
+		if (logicalOperators != null) {
+			if ((logicalOperators.size() > 1) && (logicalOperators.get(logicalOperators.size() - 1)).equals("and")) {
+				Collections.reverse(logicalOperators);
+				Collections.reverse(restriction);
 
-	// method containing implementation of equalTo operator
+			}
+			javaLogics = new String[logicalOperators.size()];
 
-	// method containing implementation of greaterThan operator
+			for (int i = 0; i < logicalOperators.size(); i++) {
+				if (logicalOperators.get(i).equals("and")) {
+					javaLogics[i] = "&&";
+				} else {
+					javaLogics[i] = "||";
+				}
+			}
 
-	// method containing implementation of greaterThanOrEqualTo operator
+		}
 
-	// method containing implementation of lessThan operator
+		String expression = null;
+		for (int i = 0; i < restriction.size(); i++) {
+			String property = restriction.get(i).getPropertyName();
+			String op = restriction.get(i).getCondition();
+			if (op == "=") {
+				op = "==";
+			}
+			String value = restriction.get(i).getPropertyValue();
+			String propertyVal = row[(header.get(property)) - 1];
+			Boolean isString = rowDataType.get((header.get(property))).equals("java.lang.String");
+			if (i == 0) {
+				if (isString) {
+					expression = "(\"" + propertyVal.toLowerCase() + "\"" + " " + op + " " + "\"" + value.toLowerCase()
+							+ "\")";
+				} else {
+					expression = "(" + propertyVal + " " + op + " " + value + ")";
+				}
+			} else {
+				String logic = javaLogics[i - 1];
+				if (isString) {
+					expression = expression + " " + logic + " " + "(\"" + propertyVal.toLowerCase() + "\"" + " " + op
+							+ " " + "\"" + value.toLowerCase() + "\")";
 
-	// method containing implementation of lessThanOrEqualTo operator
+				} else {
+					expression = expression + " " + logic + " (" + propertyVal + " " + op + " " + value + ")";
+				}
+
+			}
+			if (((i + 1) % 2) == 0) {
+				expression = "(" + expression + ")";
+			}
+
+		}
+		ScriptEngineManager mgr = new ScriptEngineManager();
+		ScriptEngine engine = mgr.getEngineByName("JavaScript");
+		try {
+			return (Boolean) engine.eval(expression);
+		} catch (ScriptException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+
+	}
+
+	
 }

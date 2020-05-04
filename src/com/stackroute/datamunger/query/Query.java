@@ -2,6 +2,13 @@ package com.stackroute.datamunger.query;
 
 import java.util.HashMap;
 
+import com.stackroute.datamunger.query.parser.QueryParameter;
+import com.stackroute.datamunger.query.parser.QueryParser;
+import com.stackroute.datamunger.reader.CsvAggregateQueryProcessor;
+import com.stackroute.datamunger.reader.CsvGroupByAggregateQueryProcessor;
+import com.stackroute.datamunger.reader.CsvGroupByQueryProcessor;
+import com.stackroute.datamunger.reader.CsvQueryProcessor;
+
 @SuppressWarnings("rawtypes")
 public class Query {
 
@@ -14,26 +21,25 @@ public class Query {
 	 */
 	public HashMap executeQuery(String queryString) {
 
-		/* instantiate QueryParser class */
+		QueryParser p = new QueryParser();
 
-		/*
-		 * call parseQuery() method of the class by passing the queryString which will
-		 * return object of QueryParameter
-		 */
+		QueryParameter parameter = p.parseQuery(queryString);
 
-		/*
-		 * Check for Type of Query based on the QueryParameter object. In this
-		 * assignment, we will process queries containing zero, one or multiple where
-		 * conditions i.e. conditions, aggregate functions, order by, group by clause
-		 */
-
-		/*
-		 * call the getResultSet() method of CsvQueryProcessor class by passing the
-		 * QueryParameter Object to it. This method is supposed to return resultSet
-		 * which is a HashMap
-		 */
-
-		return null;
+		HashMap returnMap = null;
+		if ((parameter.getAggregateFunctions()!=null && parameter.getAggregateFunctions().size() != 0) && (parameter.getGroupByFields()!=null && parameter.getGroupByFields().size() != 0)) {
+			CsvGroupByAggregateQueryProcessor csvGroupByAggregateQueryProcessor = new CsvGroupByAggregateQueryProcessor();
+			returnMap = csvGroupByAggregateQueryProcessor.getResultSet(parameter);
+		} else if (parameter.getAggregateFunctions()!=null && parameter.getAggregateFunctions().size() != 0) {
+			CsvAggregateQueryProcessor csvAggregateQueryProcessor = new CsvAggregateQueryProcessor();
+			returnMap = csvAggregateQueryProcessor.getResultSet(parameter);
+		} else if (parameter.getGroupByFields()!=null&&parameter.getGroupByFields().size() != 0) {
+			CsvGroupByQueryProcessor csvGroupByQueryProcessor = new CsvGroupByQueryProcessor();
+			returnMap = csvGroupByQueryProcessor.getResultSet(parameter);
+		} else {
+			CsvQueryProcessor CsvProcessor = new CsvQueryProcessor();
+			returnMap = CsvProcessor.getResultSet(parameter);
+		}
+		return returnMap;
 	}
 
 }
